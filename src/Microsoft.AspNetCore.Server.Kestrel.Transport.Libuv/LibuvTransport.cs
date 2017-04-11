@@ -123,6 +123,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv
         {
             var disposeTasks = _listeners.Select(listener => listener.DisposeAsync()).ToArray();
 
+            Log.LogDebug("Disposing {Listeners} listeners", disposeTasks.Length);
+
             if (!await WaitAsync(Task.WhenAll(disposeTasks), TimeSpan.FromSeconds(2.5)).ConfigureAwait(false))
             {
                 Log.LogError(0, null, "Disposing listeners failed");

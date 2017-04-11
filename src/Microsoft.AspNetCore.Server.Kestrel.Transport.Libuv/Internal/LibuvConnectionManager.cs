@@ -5,16 +5,19 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Internal.Networking;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Internal
 {
     public class LibuvConnectionManager
     {
         private readonly LibuvThread _thread;
+        private readonly ILibuvTrace _log;
 
-        public LibuvConnectionManager(LibuvThread thread)
+        public LibuvConnectionManager(LibuvThread thread, ILibuvTrace log)
         {
             _thread = thread;
+            _log = log;
         }
 
         public async Task<bool> WalkConnectionsAndCloseAsync(TimeSpan timeout)
@@ -60,6 +63,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Internal
                     tasks.Add(action(connection));
                 }
             });
+
+            _log.LogDebug("Walked {Connections} connections", tasks.Count);
 
             Task.Run(() =>
             {

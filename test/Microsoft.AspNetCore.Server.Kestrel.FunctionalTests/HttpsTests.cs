@@ -54,7 +54,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
             Assert.Equal(1, loggerFactory.FilterLogger.LastEventId.Id);
             Assert.Equal(LogLevel.Information, loggerFactory.FilterLogger.LastLogLevel);
             Assert.True(loggerFactory.ErrorLogger.TotalErrorsLogged == 0,
-                userMessage: string.Join(Environment.NewLine, loggerFactory.ErrorLogger.ErrorMessages));
+                userMessage: string.Join(Environment.NewLine, loggerFactory.ErrorLogger.Messages));
         }
 
         [Fact]
@@ -258,13 +258,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
         {
             public LogLevel LastLogLevel { get; set; }
             public EventId LastEventId { get; set; }
-            public TaskCompletionSource<object> LogTcs { get; } = new TaskCompletionSource<object>();
+            public TaskCompletionSource<object> LogTcs { get; } = new TaskCompletionSource<object>(TaskContinuationOptions.RunContinuationsAsynchronously);
 
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
             {
                 LastLogLevel = logLevel;
                 LastEventId = eventId;
-                Task.Run(() => LogTcs.SetResult(null));
+                LogTcs.SetResult(null);
             }
 
             public bool IsEnabled(LogLevel logLevel)
@@ -282,7 +282,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
         {
             private List<string> _errorMessages = new List<string>();
 
+            private List<string> _messages = new List<string>();
+
             public IEnumerable<string> ErrorMessages => _errorMessages;
+
+            public IEnumerable<string> Messages => _messages;
 
             public int TotalErrorsLogged => _errorMessages.Count;
 
@@ -298,6 +302,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
                 if (exception is ObjectDisposedException)
                 {
                     ObjectDisposedExceptionLogged = true;
+                }
+
+                lock (_messages)
+                {
+                    _messages.Add(formatter(state, exception));
                 }
             }
 

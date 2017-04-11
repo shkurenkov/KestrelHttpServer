@@ -71,7 +71,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Internal
             QueueCloseAsyncHandle = EnqueueCloseHandle;
             PipeFactory = new PipeFactory();
             WriteReqPool = new WriteReqPool(this, _log);
-            ConnectionManager = new LibuvConnectionManager(this);
+            ConnectionManager = new LibuvConnectionManager(this, _log);
         }
 
         // For testing
@@ -225,7 +225,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Internal
                     CallbackAdapter = CallbackAdapter<T>.PostAsyncCallbackAdapter,
                     Callback = callback,
                     State = state,
-                    Completion = tcs
+                    Completion = tcs,
+                    Start = DateTime.UtcNow
                 });
             }
             _post.Send();
@@ -363,6 +364,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Internal
                         {
                             try
                             {
+                                _log.LogDebug("Work took {ms}ms", (DateTime.UtcNow - work.Start).TotalMilliseconds);
                                 ((TaskCompletionSource<object>)o).SetResult(null);
                             }
                             catch (Exception e)
@@ -441,6 +443,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Internal
         private struct Work
         {
             public Action<object, object> CallbackAdapter;
+            public DateTime Start;
             public object Callback;
             public object State;
             public TaskCompletionSource<object> Completion;
