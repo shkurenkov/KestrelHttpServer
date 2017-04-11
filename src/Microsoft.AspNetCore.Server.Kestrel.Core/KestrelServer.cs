@@ -162,7 +162,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
         private void BindToServerAddresses<TContext>(List<ListenOptions> listenOptions, ServiceContext serviceContext, IHttpApplication<TContext> application)
         {
-            // If no endpoints are configured directly using KestrelServerOptions, use those configured via the IServerAddressesFeature.
             var copiedAddresses = _serverAddresses.Addresses.ToArray();
             _serverAddresses.Addresses.Clear();
 
@@ -213,6 +212,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                     }
                 }
             }
+
             BindToEndpoints(listenOptions, serviceContext, application);
         }
 

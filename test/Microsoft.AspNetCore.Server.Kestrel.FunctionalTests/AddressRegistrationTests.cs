@@ -216,7 +216,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
         }
 
         [ConditionalFact]
-        [PortSupportedCondition(5001)]
         [PortSupportedCondition(5002)]
         public async Task OverrideDirectConfigurationWithIServerAddressesFeature_Succeeds()
         {
@@ -224,10 +223,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
             var testLogger = new TestApplicationErrorLogger();
 
             var hostBuilder = new WebHostBuilder()
-               .UseKestrel(options =>
-               {
-                   options.Listen(IPAddress.Loopback, 5001);
-               })
+               .UseKestrel(options => options.Listen(IPAddress.Loopback, 5001))
                .UseUrls(overrideAddress)
                .PreferHostingUrls(true)
                .UseLoggerFactory(_ => new KestrelTestLoggerFactory(testLogger))
@@ -248,20 +244,14 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
 
         [ConditionalFact]
         [PortSupportedCondition(5001)]
-        [PortSupportedCondition(5002)]
         public async Task DoesNotOverrideDirectConfigurationWithIServerAddressesFeature_IfPreferHostingUrlsFalse()
         {
             var endPointAddress = "http://localhost:5001";
-            var testLogger = new TestApplicationErrorLogger();
 
             var hostBuilder = new WebHostBuilder()
-               .UseKestrel(options =>
-               {
-                   options.Listen(IPAddress.Loopback, 5001);
-               })
+               .UseKestrel(options => options.Listen(IPAddress.Loopback, 5001))
                .UseUrls("http://localhost:5002")
                .PreferHostingUrls(false)
-               .UseLoggerFactory(_ => new KestrelTestLoggerFactory(testLogger))
                .Configure(ConfigureEchoAddress);
 
             using (var host = hostBuilder.Build())
@@ -278,15 +268,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
         public async Task DoesNotOverrideDirectConfigurationWithIServerAddressesFeature_IfAddressesEmpty()
         {
             var endPointAddress = "http://localhost:5001";
-            var testLogger = new TestApplicationErrorLogger();
 
             var hostBuilder = new WebHostBuilder()
-               .UseKestrel(options =>
-               {
-                   options.Listen(IPAddress.Loopback, 5001);
-               })
+               .UseKestrel(options => options.Listen(IPAddress.Loopback, 5001))
                .PreferHostingUrls(true)
-               .UseLoggerFactory(_ => new KestrelTestLoggerFactory(testLogger))
                .Configure(ConfigureEchoAddress);
 
             using (var host = hostBuilder.Build())
@@ -632,7 +617,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
             }
         }
 
-        [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         private class PortSupportedConditionAttribute : Attribute, ITestCondition
         {
             private readonly int _port;
