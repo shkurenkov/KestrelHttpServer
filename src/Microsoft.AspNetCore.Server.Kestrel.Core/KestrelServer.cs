@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -29,6 +30,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         private readonly ITransportFactory _transportFactory;
 
         private bool _isRunning;
+        private bool _isStopping;
         private DateHeaderValueManager _dateHeaderValueManager;
 
         public KestrelServer(
@@ -67,7 +69,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
         private InternalKestrelServerOptions InternalOptions { get; }
 
-        public void Start<TContext>(IHttpApplication<TContext> application)
+        public async Task StartAsync<TContext>(IHttpApplication<TContext> application, CancellationToken cancellationToken)
         {
             try
             {
@@ -123,7 +125,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                     _logger.LogDebug($"No listening endpoints were configured. Binding to {Constants.DefaultServerAddress} by default.");
 
                     // "localhost" for both IPv4 and IPv6 can't be represented as an IPEndPoint.
-                    StartLocalhost(ServerAddress.FromUrl(Constants.DefaultServerAddress), serviceContext, application);
+                    await StartLocalhostAsync(ServerAddress.FromUrl(Constants.DefaultServerAddress), serviceContext, application, cancellationToken);
 
                     // If StartLocalhost doesn't throw, there is at least one listener.
                     // The port cannot change for "localhost".
@@ -168,7 +170,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                             if (string.Equals(parsedAddress.Host, "localhost", StringComparison.OrdinalIgnoreCase))
                             {
                                 // "localhost" for both IPv4 and IPv6 can't be represented as an IPEndPoint.
-                                StartLocalhost(parsedAddress, serviceContext, application);
+                                await StartLocalhostAsync(parsedAddress, serviceContext, application, cancellationToken);
 
                                 // If StartLocalhost doesn't throw, there is at least one listener.
                                 // The port cannot change for "localhost".
@@ -194,7 +196,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
                     try
                     {
-                        transport.BindAsync().Wait();
+                        await transport.BindAsync();
                     }
                     catch (AggregateException ex) when (ex.InnerException is AddressInUseException)
                     {
@@ -213,8 +215,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             }
         }
 
-        public void Dispose()
+        // Graceful shutdown if possible
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
+            _isStopping = true;
             if (_transports != null)
             {
                 var tasks = new Task[_transports.Count];
@@ -222,17 +226,28 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                 {
                     tasks[i] = _transports[i].UnbindAsync();
                 }
-                Task.WaitAll(tasks);
+                await Task.WhenAll(tasks);
 
                 // TODO: Do transport-agnostic connection management/shutdown.
                 for (int i = 0; i < _transports.Count; i++)
                 {
                     tasks[i] = _transports[i].StopAsync();
                 }
-                Task.WaitAll(tasks);
+                await Task.WhenAll(tasks);
             }
 
             _dateHeaderValueManager?.Dispose();
+        }
+
+        // Ungraceful shutdown
+        public void Dispose()
+        {
+            if (!_isStopping)
+            {
+                var cancelledTokenSource = new CancellationTokenSource();
+                cancelledTokenSource.Cancel();
+                StopAsync(cancelledTokenSource.Token).GetAwaiter().GetResult();
+            }
         }
 
         private void ValidateOptions()
@@ -252,7 +267,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             }
         }
 
-        private void StartLocalhost<TContext>(ServerAddress parsedAddress, ServiceContext serviceContext, IHttpApplication<TContext> application)
+        private async Task StartLocalhostAsync<TContext>(ServerAddress parsedAddress, ServiceContext serviceContext, IHttpApplication<TContext> application, CancellationToken cancellationToken)
         {
             if (parsedAddress.Port == 0)
             {
@@ -271,7 +286,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                 var connectionHandler = new ConnectionHandler<TContext>(ipv4ListenOptions, serviceContext, application);
                 var transport = _transportFactory.Create(ipv4ListenOptions, connectionHandler);
                 _transports.Add(transport);
-                transport.BindAsync().Wait();
+                await transport.BindAsync();
             }
             catch (AggregateException ex) when (ex.InnerException is AddressInUseException)
             {
@@ -293,7 +308,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                 var connectionHandler = new ConnectionHandler<TContext>(ipv6ListenOptions, serviceContext, application);
                 var transport = _transportFactory.Create(ipv6ListenOptions, connectionHandler);
                 _transports.Add(transport);
-                transport.BindAsync().Wait();
+                await transport.BindAsync();
             }
             catch (AggregateException ex) when (ex.InnerException is AddressInUseException)
             {
