@@ -30,7 +30,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         private readonly ITransportFactory _transportFactory;
 
         private bool _isRunning;
-        private bool _isStopping;
+        private int _isStopping;
         private DateHeaderValueManager _dateHeaderValueManager;
 
         public KestrelServer(
@@ -218,7 +218,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         // Graceful shutdown if possible
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            _isStopping = true;
+            if (Interlocked.Exchange(ref _isStopping, 1) == 1)
+            {
+                return;
+            }
             if (_transports != null)
             {
                 var tasks = new Task[_transports.Count];
@@ -242,12 +245,9 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         // Ungraceful shutdown
         public void Dispose()
         {
-            if (!_isStopping)
-            {
-                var cancelledTokenSource = new CancellationTokenSource();
-                cancelledTokenSource.Cancel();
-                StopAsync(cancelledTokenSource.Token).GetAwaiter().GetResult();
-            }
+            var cancelledTokenSource = new CancellationTokenSource();
+            cancelledTokenSource.Cancel();
+            StopAsync(cancelledTokenSource.Token).GetAwaiter().GetResult();
         }
 
         private void ValidateOptions()
