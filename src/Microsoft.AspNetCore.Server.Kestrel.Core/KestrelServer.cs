@@ -198,7 +198,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                     {
                         await transport.BindAsync();
                     }
-                    catch (AggregateException ex) when (ex.InnerException is AddressInUseException)
+                    catch (AddressInUseException ex)
                     {
                         throw new IOException($"Failed to bind to address {endPoint}: address already in use.", ex);
                     }
@@ -288,11 +288,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                 _transports.Add(transport);
                 await transport.BindAsync();
             }
-            catch (AggregateException ex) when (ex.InnerException is AddressInUseException)
+            catch (AddressInUseException ex)
             {
                 throw new IOException($"Failed to bind to address {parsedAddress} on the IPv4 loopback interface: port already in use.", ex);
             }
-            catch (AggregateException ex)
+            catch (Exception ex)
             {
                 _logger.LogWarning(0, $"Unable to bind to {parsedAddress} on the IPv4 loopback interface: ({ex.Message})");
                 exceptions.Add(ex.InnerException);
@@ -310,11 +310,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                 _transports.Add(transport);
                 await transport.BindAsync();
             }
-            catch (AggregateException ex) when (ex.InnerException is AddressInUseException)
+            catch (AddressInUseException ex)
             {
                 throw new IOException($"Failed to bind to address {parsedAddress} on the IPv6 loopback interface: port already in use.", ex);
             }
-            catch (AggregateException ex)
+            catch (Exception ex)
             {
                 _logger.LogWarning(0, $"Unable to bind to {parsedAddress} on the IPv6 loopback interface: ({ex.Message})");
                 exceptions.Add(ex.InnerException);
