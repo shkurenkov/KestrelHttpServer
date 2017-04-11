@@ -295,7 +295,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             catch (Exception ex)
             {
                 _logger.LogWarning(0, $"Unable to bind to {parsedAddress} on the IPv4 loopback interface: ({ex.Message})");
-                exceptions.Add(ex.InnerException);
+                exceptions.Add(ex);
             }
 
             try
@@ -317,7 +317,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             catch (Exception ex)
             {
                 _logger.LogWarning(0, $"Unable to bind to {parsedAddress} on the IPv6 loopback interface: ({ex.Message})");
-                exceptions.Add(ex.InnerException);
+                exceptions.Add(ex);
             }
 
             if (exceptions.Count == 2)
