@@ -176,12 +176,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
                 if (!string.IsNullOrEmpty(parsedAddress.PathBase))
                 {
-                    throw new InvalidOperationException($"A path base can only be configured using {nameof(IApplicationBuilder)}.UsePathBase().");
-                }
-
-                if (!string.IsNullOrEmpty(parsedAddress.PathBase))
-                {
                     _logger.LogWarning($"Path base in address {address} is not supported and will be ignored. To specify a path base, use {nameof(IApplicationBuilder)}.UsePathBase().");
+                    throw new InvalidOperationException($"A path base can only be configured using {nameof(IApplicationBuilder)}.UsePathBase().");
                 }
 
                 if (parsedAddress.IsUnixPipe)
