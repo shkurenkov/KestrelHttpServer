@@ -202,8 +202,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
                     var span = reader.Span;
                     var remaining = span.Length - reader.Index;
 
-                    fixed (byte* pBuffer = &span.DangerousGetPinnableReference())
+                    fixed (byte* pinned = &span.DangerousGetPinnableReference())
                     {
+                        byte* pBuffer = pinned;
+
                         while (remaining > 0)
                         {
                             var index = reader.Index;
